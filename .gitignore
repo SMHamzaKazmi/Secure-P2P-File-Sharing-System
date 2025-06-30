@@ -1,0 +1,31 @@
+## Ignore Visual Studio temporary files, build results, and more
+[Bb]in/
+[Oo]bj/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.log
+
+## Ignore build outputs
+*.exe
+*.dll
+*.pdb
+
+## Ignore other system files
+*.DS_Store
+Thumbs.db
+
+## NuGet Packages
+packages/
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+
+## Rider
+.idea/
+
+## Other
+*.vs/
