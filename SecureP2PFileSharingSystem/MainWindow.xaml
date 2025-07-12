@@ -5,8 +5,79 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SecureP2PFileSharingSystem"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Secure P2P File Sharing System" Height="500" Width="900">
     <Grid>
-
+        <Grid Background="#FFE5E5E5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="0.5*"></RowDefinition>
+                <RowDefinition Height="2*"></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBlock Text="Listening for incoming files on port 5000..." HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="3">
+                <Button Content="Upload Certificate" Width="125" Height="25" HorizontalAlignment="Right" VerticalAlignment="Center" Click="UploadCertificateButton_Click"/>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="4">
+                <Button Content="Download Certificate" Width="125" Height="25" HorizontalAlignment="Right" VerticalAlignment="Center" Click="DownloadCertificateButton_Click"/>
+            </Grid>
+            <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBlock Text="Enter Certificate Name:" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+            <Grid Grid.Row="3" Grid.Column="3" Grid.ColumnSpan="2">
+                <TextBlock Text="Enter Certificate Password:" HorizontalAlignment="Left" Margin="20,0,0,0" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+            <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBox x:Name="CertificateNameTextBox" HorizontalAlignment="Stretch" Margin="0,0,20,0" TextWrapping="NoWrap" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid Grid.Row="4" Grid.Column="3" Grid.ColumnSpan="2">
+                <TextBox x:Name="CertificatePasswordTextBox" HorizontalAlignment="Stretch" Margin="20,0,0,0" TextWrapping="NoWrap" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBlock Text="Select File to Send:" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+            <Grid Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBox x:Name="SelectFileTextBox" HorizontalAlignment="Stretch" TextWrapping="NoWrap" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid Grid.Row="7" Grid.Column="3">
+                <Button Content="Browse" Width="65" Height="25" HorizontalAlignment="Center" VerticalAlignment="Center" Click="BrowseButton_Click"/>
+            </Grid>
+            <Grid Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBlock Text="Enter IP address of Receiver:" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+            <Grid Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBox x:Name="IpAddressTextBox" HorizontalAlignment="Stretch" TextWrapping="NoWrap" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid Grid.Row="9" Grid.Column="3">
+                <Button Content="Send" Width="65" Height="25" HorizontalAlignment="Center" VerticalAlignment="Center" Click="SendButton_Click"/>
+            </Grid>
+            <Grid Grid.Row="11" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBlock x:Name="TransferStatusTextBlock" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+            <Grid Grid.Row="13" Grid.Column="1" Grid.ColumnSpan="2">
+                <TextBlock x:Name="TransferProgressTextBlock" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16"/>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

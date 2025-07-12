@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Windows;
 
 namespace SecureP2PFileSharingSystem
 {
@@ -11,45 +12,21 @@ namespace SecureP2PFileSharingSystem
     {
         private static int Port = 5000;
         private static int BufferSize = 4096;
-        private static string CertName = "A.pfx";
-        private static string CertPassword = "A";
         private static List<X509Certificate2> TrustedCertificates = [];
 
-        public static async Task Main(string[] args)
-        {
-            TrustedCertificates = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "Certificates", "PeersCertificates"), "*.cer")
-                .Select(path => new X509Certificate2(path))
-                .ToList();
-
-            Task.Run(() => StartListener());
-            Console.WriteLine("P2P Node started. Type 'send' to send a file, or 'exit' to quit.");
-
-            while (true)
-            {
-                Console.Write("> ");
-                string? command = Console.ReadLine()?.ToLower();
-
-                if (command == "send")
-                    await SendFile();
-                else if (command == "exit")
-                    break;
-            }
-        }
-
-        private static async Task StartListener()
+        public static async Task StartListener(MainWindow mainWindow)
         {
             TcpListener listener = new TcpListener(IPAddress.Any, Port);
             listener.Start();
-            Console.WriteLine($"Listening for incoming files on port {Port}...");
 
             while (true)
             {
                 TcpClient client = await listener.AcceptTcpClientAsync();
-                Task.Run(() => ReceiveFile(client));
+                Task.Run(() => ReceiveFile(client, mainWindow));
             }
         }
 
-        private static async Task ReceiveFile(TcpClient client)
+        private static async Task ReceiveFile(TcpClient client, MainWindow mainWindow)
         {
             try
             {
@@ -57,8 +34,10 @@ namespace SecureP2PFileSharingSystem
                 using (NetworkStream netStream = client.GetStream())
                 using (SslStream sslStream = new SslStream(netStream, false))
                 {
-                    string certificatePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "Certificates", "MyCertificate", CertName);
-                    string certificatePassword = CertPassword;
+                    string certificateName = mainWindow.Dispatcher.Invoke(() => mainWindow.CertificateNameTextBox.Text);
+                    string certificatePassword = mainWindow.Dispatcher.Invoke(() => mainWindow.CertificatePasswordTextBox.Text);
+
+                    string certificatePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "Certificates", "MyCertificate", certificateName + "-public.cer");
                     var myCertificate = new X509Certificate2(certificatePath, certificatePassword);
 
                     await sslStream.AuthenticateAsServerAsync(myCertificate, false, false);
@@ -69,13 +48,15 @@ namespace SecureP2PFileSharingSystem
                     string fileName = reader.ReadString();
                     long fileSize = reader.ReadInt64();
 
-                    string partPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", fileName + ".part");
+                    string partPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName + ".part");
                     long existingSize = 0;
 
                     if (File.Exists(partPath))
                         existingSize = new FileInfo(partPath).Length;
 
                     writer.Write(existingSize);
+
+                    mainWindow.Dispatcher.Invoke(() => mainWindow.TransferStatusTextBlock.Text = $"Receiving '{fileName}'");
 
                     using FileStream fileStream = new FileStream(partPath, FileMode.Append, FileAccess.Write);
                     byte[] buffer = new byte[BufferSize];
@@ -84,10 +65,9 @@ namespace SecureP2PFileSharingSystem
 
                     while (totalReceived < fileSize)
                     {
-                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-
                         try
                         {
+                            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                             var readTask = sslStream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
                             bytesRead = await readTask;
 
@@ -101,54 +81,46 @@ namespace SecureP2PFileSharingSystem
 
                         await fileStream.WriteAsync(buffer, 0, bytesRead);
                         totalReceived += bytesRead;
-                        Console.Write($"\r   Progress: {100 * totalReceived / fileSize}%");
+
+                        mainWindow.Dispatcher.Invoke(() => mainWindow.TransferProgressTextBlock.Text = $"Progress: {100 * totalReceived / fileSize}%");
                     }
 
                     fileStream.Close();
 
                     if (totalReceived == fileSize)
                     {
-                        string finalPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", fileName);
+                        string finalPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName);
                         File.Move(partPath, finalPath);
-                        Console.WriteLine($"\nFile received and saved as: {Path.GetFileName(finalPath)}");
+
+                        MessageBox.Show($"File received and saved as: {Path.GetFileName(finalPath)}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     else
-                    {
-                        Console.WriteLine($"\nConnection lost. Partial file saved as: {Path.GetFileName(partPath)}");
-                    }
+                        MessageBox.Show($"Connection lost. Partial file saved as: {Path.GetFileName(partPath)}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
             catch (IOException)
             {
-                Console.WriteLine($"\nConnection lost or timeout occurred. Partial file saved as .part file.");
+                MessageBox.Show("Connection lost or timeout occurred. Partial file saved as .part file.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"\nReceive error: {ex.Message}");
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private static async Task SendFile()
+        public static async Task SendFile(string filePath, string ipAddress, MainWindow mainWindow)
         {
-            Console.Write("Enter receiver IP: ");
-            string ip = Console.ReadLine().Trim();
-
-            Console.Write("Enter full path of the file to send: ");
-            string path = Console.ReadLine().Trim('"');
-
-            if (!File.Exists(path))
-            {
-                Console.WriteLine("File not found.");
-                return;
-            }
-
-            string fileName = Path.GetFileName(path);
-            long fileSize = new FileInfo(path).Length;
-
             try
             {
+                string fileName = Path.GetFileName(filePath);
+                long fileSize = new FileInfo(filePath).Length;
+
                 using TcpClient client = new TcpClient();
-                await client.ConnectAsync(IPAddress.Parse(ip), Port);
+                await client.ConnectAsync(IPAddress.Parse(ipAddress), Port);
+
+                TrustedCertificates = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "Certificates", "PeersCertificates"), "*.cer")
+                    .Select(path => new X509Certificate2(path))
+                    .ToList();
 
                 using NetworkStream netStream = client.GetStream();
                 using SslStream sslStream = new SslStream(netStream, false, ValidateServerCertificate);
@@ -163,11 +135,11 @@ namespace SecureP2PFileSharingSystem
 
                 long resumeOffset = reader.ReadInt64();
                 if (resumeOffset != 0)
-                    Console.WriteLine($"Resuming from byte {resumeOffset}...");
+                    mainWindow.Dispatcher.Invoke(() => mainWindow.TransferStatusTextBlock.Text = $"Resuming '{fileName}'");
                 else
-                    Console.WriteLine($"Sending '{fileName}' ({fileSize} bytes)...");
+                    mainWindow.Dispatcher.Invoke(() => mainWindow.TransferStatusTextBlock.Text = $"Sending '{fileName}'");
 
-                using FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
+                using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 fileStream.Seek(resumeOffset, SeekOrigin.Begin);
 
                 byte[] buffer = new byte[BufferSize];
@@ -178,14 +150,15 @@ namespace SecureP2PFileSharingSystem
                 {
                     await sslStream.WriteAsync(buffer, 0, bytesRead);
                     totalSent += bytesRead;
-                    Console.Write($"\r   Progress: {100 * totalSent / fileSize}%");
+
+                    mainWindow.Dispatcher.Invoke(() => mainWindow.TransferProgressTextBlock.Text = $"Progress: {100 * totalSent / fileSize}%");
                 }
 
-                Console.WriteLine("\nFile sent successfully.");
+                MessageBox.Show("File sent successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: " + ex.Message);
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -198,7 +171,7 @@ namespace SecureP2PFileSharingSystem
             bool trusted = TrustedCertificates.Any(trustedCert => trustedCert.Thumbprint == receivedCert.Thumbprint);
 
             if (!trusted)
-                Console.WriteLine("Server certificate is NOT trusted!");
+                MessageBox.Show("Server certificate is not trusted.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             return trusted;
         }
